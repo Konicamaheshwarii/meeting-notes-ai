@@ -1,0 +1,71 @@
+:host { display: grid; gap: 1rem; padding-top: 1rem; }
+
+.notes { display: grid; gap: 1rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.toolbar { gap: 0.4rem; }
+.toast { margin: 0; color: var(--good); font-weight: 600; font-size: 0.9rem; }
+
+.tldr {
+  border-left: 4px solid var(--accent);
+  p { margin: 0; font-size: 1.05rem; }
+}
+
+.decisions li::marker { content: '✓  '; color: var(--accent); }
+
+.checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0.75rem;
+  > li {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    padding: 0.65rem 0;
+    border-top: 1px solid var(--border);
+    margin: 0;
+    > input { margin-top: 0.25rem; }
+  }
+  .body { flex: 1; display: grid; gap: 0.3rem; min-width: 0; }
+  .task { font-weight: 500; font-size: 0.95rem; cursor: pointer; }
+  .meta { gap: 0.3rem; }
+  .done .task { text-decoration: line-through; color: var(--muted); }
+}
+
+.edit {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  .wide { grid-column: 1 / -1; }
+}
+
+.add input { flex: 1; min-width: 0; padding: 0.35rem 0.6rem; }
+
+.tone {
+  display: inline-block;
+  text-transform: capitalize;
+  font-weight: 700;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  &[data-tone='positive'] { color: var(--good); }
+  &[data-tone='mixed'] { color: var(--warn); }
+  &[data-tone='tense'], &[data-tone='negative'] { color: var(--bad); }
+}
+
+.talk {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  li { display: grid; grid-template-columns: minmax(90px, 160px) 1fr auto; gap: 0.75rem; align-items: center; margin: 0; }
+  .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+  .num { font-variant-numeric: tabular-nums; font-size: 0.85rem; color: var(--muted); }
+}
+
+@media (max-width: 560px) {
+  .edit { grid-template-columns: 1fr; }
+  .talk li { grid-template-columns: 1fr auto; .bar { grid-column: 1 / -1; grid-row: 2; } }
+}

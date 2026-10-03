@@ -1,0 +1,30 @@
+:host { display: grid; gap: 0.9rem; padding-top: 1rem; }
+
+.head { display: grid; gap: 0.4rem; }
+
+.title {
+  font: inherit;
+  font-size: clamp(1.35rem, 4vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.2rem 0.4rem;
+  margin-left: -0.4rem;
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  overflow: hidden;
+  field-sizing: content;
+  line-height: 1.25;
+  &:hover { border-color: var(--border); }
+  &:focus-visible { outline: 2px solid var(--accent); background: var(--surface); }
+}
+
+.facts { gap: 0.4rem 0.9rem; }
+.date {
+  font-weight: 400;
+  input { width: auto; padding: 0.2rem 0.5rem; font-size: 0.85rem; background: transparent; }
+}

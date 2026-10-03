@@ -31,7 +31,9 @@ function mergeTone(tones: Tone[]): Tone {
   tones.forEach((t) => counts.set(t, (counts.get(t) ?? 0) + 1));
   const [top] = [...counts].sort((a, b) => b[1] - a[1] || SEVERITY[b[0]] - SEVERITY[a[0]]);
   // A tense stretch in an otherwise positive meeting reads as mixed, not as all-positive.
-  if (top[0] === 'positive' && tones.some((t) => SEVERITY[t] >= 3)) return 'mixed';
+  const hasUpbeat = tones.includes('positive');
+  const hasConcern = tones.some((t) => SEVERITY[t] >= 3);
+  if (hasUpbeat && hasConcern && (top[0] === 'positive' || top[1] * 2 <= tones.length)) return 'mixed';
   return top[0];
 }
 

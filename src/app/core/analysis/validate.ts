@@ -31,7 +31,7 @@ const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : typeof v
 function strings(v: unknown, max: number): string[] {
   if (!Array.isArray(v)) return typeof v === 'string' && v.trim() ? [v.trim()] : [];
   return v
-    .map((x) => (typeof x === 'string' ? x : str(x?.text ?? x?.decision ?? x?.question ?? x?.point ?? x?.summary)))
+    .map((x) => (typeof x === 'string' || typeof x === 'number' ? String(x) : str(x?.text ?? x?.decision ?? x?.question ?? x?.point ?? x?.summary)))
     .map((x) => x.trim().replace(/^[-*•]\s*/, ''))
     .filter(Boolean)
     .slice(0, max);

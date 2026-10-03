@@ -1,0 +1,44 @@
+@if (!loaded()) {
+  <p class="row muted" role="status"><span class="spinner" aria-hidden="true"></span> Loading…</p>
+} @else if (meeting(); as m) {
+  <header class="head">
+    <label class="sr-only" for="meeting-title">Meeting title</label>
+    <textarea id="meeting-title" class="title" rows="1" [value]="title()" (change)="rename($any($event.target).value)"
+              (keydown.enter)="$event.preventDefault(); $any($event.target).blur()"></textarea>
+    @if (facts(); as f) {
+      <div class="row facts muted small">
+        <label class="date">
+          <span class="sr-only">Meeting date</span>
+          <input type="date" [value]="m.date" (change)="setDate($any($event.target).value)" />
+        </label>
+        <span>{{ f.duration }}</span>
+        <span>{{ f.speakers }} speaker{{ f.speakers === 1 ? '' : 's' }}</span>
+        <span class="chip plain">{{ f.source }}</span>
+        @if (m.analyzedWith) { <span class="chip plain" title="Notes written by">Notes: {{ m.analyzedWith }}</span> }
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost sm danger" (click)="remove()">Delete</button>
+      </div>
+    }
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Meeting views">
+    <button type="button" role="tab" id="tab-notes" aria-controls="view" [attr.aria-selected]="view() === 'notes'" (click)="view.set('notes')">Notes</button>
+    <button type="button" role="tab" id="tab-transcript" aria-controls="view" [attr.aria-selected]="view() === 'transcript'" (click)="view.set('transcript')">
+      Transcript <span class="chip plain">{{ m.segments.length }}</span>
+    </button>
+  </div>
+
+  <div id="view" role="tabpanel" [attr.aria-labelledby]="'tab-' + view()">
+    @if (view() === 'notes') {
+      <app-notes [meeting]="m" />
+    } @else {
+      <app-transcript [meeting]="m" />
+    }
+  </div>
+} @else {
+  <div class="card empty">
+    <h1>Meeting not found</h1>
+    <p>It may have been deleted, or it was saved in another browser.</p>
+    <a class="btn primary" routerLink="/library">Open the library</a>
+  </div>
+}

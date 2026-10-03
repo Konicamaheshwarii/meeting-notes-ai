@@ -1,0 +1,144 @@
+@if (run(); as p) {
+  <section class="card stack running" aria-live="polite">
+    <div class="row"><span class="spinner" aria-hidden="true"></span><strong>{{ p.label }}</strong>
+      <span class="muted small">step {{ p.step }} of {{ p.total }}{{ p.received ? ' · ' + p.received + ' characters received' : '' }}</span>
+      <span class="spacer"></span>
+      <button type="button" class="btn sm" (click)="analyzer.cancel()">Cancel</button>
+    </div>
+    <div class="progress" role="progressbar" aria-label="Analysis progress" [attr.aria-valuenow]="percent()" aria-valuemin="0" aria-valuemax="100">
+      <span [style.width.%]="percent()"></span>
+    </div>
+    @if (p.total > 1) {
+      <p class="muted small">Long meeting: each part is summarised separately, then the parts are merged.</p>
+    }
+  </section>
+}
+
+@if (error()) {
+  <div class="alert row" role="alert">
+    <span>{{ error() }}</span><span class="spacer"></span>
+    <button type="button" class="btn sm" (click)="analyze()">Try again</button>
+    <a class="btn sm" routerLink="/settings">Settings</a>
+  </div>
+}
+
+@if (analysis(); as a) {
+  <div class="toolbar row">
+    <button type="button" class="btn sm" (click)="copyMarkdown()">Copy Markdown</button>
+    <button type="button" class="btn sm" (click)="downloadMarkdown()">Download .md</button>
+    <button type="button" class="btn sm" (click)="downloadIcs()">Action items .ics</button>
+    <button type="button" class="btn sm" (click)="downloadCsv()">Action items .csv</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn sm ghost" (click)="analyze()" [disabled]="!!run()">↻ Re-analyze with {{ settings.providerLabel() }}</button>
+  </div>
+  @if (toast()) { <p class="toast" role="status">{{ toast() }}</p> }
+
+  <article class="notes">
+    @if (a.tldr) {
+      <section class="tldr card">
+        <h2>TL;DR</h2>
+        <p>{{ a.tldr }}</p>
+      </section>
+    }
+
+    <div class="grid">
+      <section class="card">
+        <h2>Key points</h2>
+        @if (a.keyPoints.length) {
+          <ul>@for (k of a.keyPoints; track $index) { <li>{{ k }}</li> }</ul>
+        } @else { <p class="muted">None recorded.</p> }
+      </section>
+      <section class="card">
+        <h2>Decisions</h2>
+        @if (a.decisions.length) {
+          <ul class="decisions">@for (d of a.decisions; track $index) { <li>{{ d }}</li> }</ul>
+        } @else { <p class="muted">No decisions were made.</p> }
+      </section>
+    </div>
+
+    <section class="card actions">
+      <div class="row">
+        <h2>Action items</h2>
+        <span class="chip plain">{{ done() }}/{{ a.actionItems.length }} done</span>
+        @if (dated()) { <span class="chip plain">{{ dated() }} with due dates</span> }
+      </div>
+      <ul class="checklist">
+        @for (item of a.actionItems; track item.id) {
+          <li [class.done]="item.done">
+            @if (editing() === item.id) {
+              <form class="edit" (submit)="$event.preventDefault(); save(item, task.value, owner.value, due.value, prio.value)">
+                <label class="wide">Task <input #task type="text" [value]="item.task" /></label>
+                <label>Owner <input #owner type="text" list="people" [value]="item.owner ?? ''" /></label>
+                <label>Due <input #due type="date" [value]="item.due ?? ''" /></label>
+                <label>Priority
+                  <select #prio>
+                    @for (p of priorities; track p) { <option [value]="p" [selected]="item.priority === p">{{ p }}</option> }
+                  </select>
+                </label>
+                <div class="row wide">
+                  <button class="btn sm primary" type="submit">Save</button>
+                  <button class="btn sm" type="button" (click)="editing.set(null)">Cancel</button>
+                  <span class="spacer"></span>
+                  <button class="btn sm danger" type="button" (click)="removeItem(item)">Delete</button>
+                </div>
+              </form>
+            } @else {
+              <input type="checkbox" [id]="'ai-' + item.id" [checked]="item.done" (change)="toggle(item, $any($event.target).checked)" />
+              <div class="body">
+                <label [for]="'ai-' + item.id" class="task">{{ item.task }}</label>
+                <div class="row meta">
+                  @if (item.owner) { <span class="chip">{{ item.owner }}</span> } @else { <span class="chip plain">Unassigned</span> }
+                  @if (item.due) { <span class="chip plain" [class.high]="overdue(item)">Due {{ dueLabel(item.due) }}</span> }
+                  @if (item.priority !== 'medium') { <span class="chip" [class.high]="item.priority === 'high'" [class.low]="item.priority === 'low'">{{ item.priority }}</span> }
+                </div>
+              </div>
+              <button type="button" class="btn ghost sm" (click)="editing.set(item.id)" [attr.aria-label]="'Edit: ' + item.task">Edit</button>
+            }
+          </li>
+        } @empty {
+          <li class="muted">No action items found.</li>
+        }
+      </ul>
+      <datalist id="people">@for (s of speakers(); track s) { <option [value]="s"></option> }</datalist>
+      <form class="add row" (submit)="$event.preventDefault(); addItem(newTask)">
+        <label class="sr-only" for="new-task">New action item</label>
+        <input #newTask id="new-task" type="text" placeholder="Add an action item" />
+        <button class="btn sm" type="submit">Add</button>
+      </form>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Open questions</h2>
+        @if (a.openQuestions.length) {
+          <ul>@for (q of a.openQuestions; track $index) { <li>{{ q }}</li> }</ul>
+        } @else { <p class="muted">Nothing left open.</p> }
+      </section>
+      <section class="card">
+        <h2>Tone</h2>
+        <p><span class="tone" [attr.data-tone]="a.sentiment.tone">{{ a.sentiment.tone }}</span></p>
+        <p class="muted small">{{ a.sentiment.note }}</p>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Talk time</h2>
+      <p class="muted small">Measured from the transcript timestamps, not by the AI.</p>
+      <ul class="talk">
+        @for (t of talk(); track t.speaker) {
+          <li>
+            <span class="who">{{ t.speaker }}</span>
+            <span class="bar" aria-hidden="true"><span [style.width.%]="t.share * 100"></span></span>
+            <span class="num">{{ clock(t.seconds) }} · {{ (t.share * 100).toFixed(0) }}%</span>
+          </li>
+        }
+      </ul>
+    </section>
+  </article>
+} @else if (!run()) {
+  <section class="card empty">
+    <h2>No notes yet</h2>
+    <p>Generate a summary, decisions and action items from the {{ meeting().segments.length }}-segment transcript.</p>
+    <button type="button" class="btn primary" (click)="analyze()">Write notes with {{ settings.providerLabel() }}</button>
+  </section>
+}

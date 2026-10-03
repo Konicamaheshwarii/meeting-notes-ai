@@ -1,0 +1,64 @@
+<section class="card stack">
+  <h2>Speakers</h2>
+  <p class="muted small">Rename a speaker to relabel every line (and their action items). Use an existing name to merge two speakers.</p>
+  <div class="people">
+    @for (s of speakers(); track s) {
+      <label>
+        <span class="sr-only">Rename {{ s }}</span>
+        <input type="text" [value]="s" (change)="rename(s, $any($event.target).value)" (keydown.enter)="$any($event.target).blur()" />
+        <span class="muted small">{{ clock(talk().get(s)?.seconds ?? 0) }} · {{ talk().get(s)?.turns ?? 0 }} turns</span>
+      </label>
+    }
+  </div>
+</section>
+
+<section class="card stack">
+  <div class="row">
+    <label class="search">
+      <span class="sr-only">Search the transcript</span>
+      <input type="search" placeholder="Search the transcript" [value]="query()" (input)="query.set($any($event.target).value)" />
+    </label>
+    @if (matches(); as m) {
+      <span class="muted small" aria-live="polite">{{ m.size }} match{{ m.size === 1 ? '' : 'es' }}</span>
+      <label class="check"><input type="checkbox" [checked]="onlyMatches()" (change)="onlyMatches.set($any($event.target).checked)" /> Only matches</label>
+    }
+    <span class="spacer"></span>
+    <button type="button" class="btn sm" (click)="copy()">{{ copied() ? 'Copied' : 'Copy transcript' }}</button>
+  </div>
+  @if (estimated()) {
+    <p class="muted small">Some times are estimated from word count (marked ~) because the source had no timestamps.</p>
+  }
+
+  <ol class="segments">
+    @for (seg of visible(); track seg.id) {
+      <li [class.hit]="matches()?.has(seg.id)">
+        <span class="time">{{ seg.estimated ? '~' : '' }}{{ clock(seg.start) }}</span>
+        <div class="body">
+          <label class="who">
+            <span class="sr-only">Speaker at {{ clock(seg.start) }}</span>
+            <select (change)="setSpeaker(seg, $any($event.target).value)">
+              @for (s of speakers(); track s) { <option [value]="s" [selected]="s === seg.speaker">{{ s }}</option> }
+            </select>
+          </label>
+          @if (editing() === seg.id) {
+            <label class="sr-only" [for]="'t-' + seg.id">Text</label>
+            <textarea #txt [id]="'t-' + seg.id" rows="3" [value]="seg.text"></textarea>
+            <div class="row">
+              <button type="button" class="btn sm primary" (click)="saveText(seg, txt.value)">Save</button>
+              <button type="button" class="btn sm" (click)="editing.set(null)">Cancel</button>
+              <span class="spacer"></span>
+              <button type="button" class="btn sm danger" (click)="remove(seg)">Delete line</button>
+            </div>
+          } @else {
+            <p>@for (p of parts(seg.text); track $index) {@if (p.hit) {<mark>{{ p.text }}</mark>} @else {<span>{{ p.text }}</span>}}</p>
+          }
+        </div>
+        @if (editing() !== seg.id) {
+          <button type="button" class="btn ghost sm" (click)="editing.set(seg.id)" [attr.aria-label]="'Edit line at ' + clock(seg.start)">Edit</button>
+        }
+      </li>
+    } @empty {
+      <li class="muted">No lines match “{{ query() }}”.</li>
+    }
+  </ol>
+</section>

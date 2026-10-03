@@ -14,7 +14,7 @@ const NAME_TIME_TEXT = new RegExp(String.raw`^(${NAME})\s*[\[(](${TIME})[\])]\s*
 const NAME_TIME_HEADER = new RegExp(String.raw`^(${NAME})\s+[\[(]?(${TIME})[\])]?$`, 'u');
 const NAME_TEXT = new RegExp(String.raw`^(${NAME})\s*:\s*(.*)$`, 'u');
 /** Words that look like "Label:" but are not speakers. */
-const NOT_NAMES = /^(note|notes|re|fyi|update|agenda|action items?|todo|tl;?dr|summary|http|https|q|a|step \d+|item \d+)$/i;
+const NOT_NAMES = /^(note|notes|re|fyi|update|agenda|action items?|todo|tl;?dr|summary|http|https|step \d+|item \d+)$/i;
 
 /** "1:02:03.5" -> 3723.5, "12:05" -> 725. */
 export function parseTime(text: string): number | null {

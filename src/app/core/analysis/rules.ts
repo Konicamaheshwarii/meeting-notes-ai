@@ -143,7 +143,10 @@ function findActionCandidates(sentences: Sentence[], segments: Segment[], names:
         // Claims the most recent item that is unowned or already asked of this speaker.
         const claimed = [...out].reverse().find((c) => s.pos - c.sentence.pos <= 4 && (!c.owner || c.owner === s.speaker));
         if (claimed && !isGeneric(s.speaker)) claimed.owner = s.speaker;
-        if (claimed) claimed.dueFrom ??= s.text;
+        // "I can take that. Done by tomorrow." - the date may follow in the next short sentence.
+        const next = sentences[s.pos + 1];
+        const follow = next && next.speaker === s.speaker && next.text.split(/\s+/).length <= 12 ? ` ${next.text}` : '';
+        if (claimed) claimed.dueFrom ??= s.text + follow;
         continue;
       }
       out.push({ task, owner: isGeneric(s.speaker) ? undefined : s.speaker, sentence: s });
@@ -258,6 +261,8 @@ function topSentences(sentences: Sentence[], n: number): string[] {
   const chosen: typeof ranked = [];
   for (const r of ranked) {
     if (chosen.length >= n || r.score <= 0) break;
+    // Questions and fragments ("Thanks for joining.") make poor summary lines.
+    if (r.text.endsWith('?') || r.text.split(/\s+/).length < 6) continue;
     if (chosen.some((c) => jaccard(c.text, r.text) > 0.35)) continue;
     chosen.push(r);
   }

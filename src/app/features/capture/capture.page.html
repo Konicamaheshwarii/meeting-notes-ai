@@ -1,0 +1,152 @@
+<section class="hero">
+  <h1>Turn meetings into notes people act on</h1>
+  <p class="muted">Capture a meeting live, record or upload audio, or paste a transcript. Minutes writes the summary, decisions and
+    action items with owners and due dates.</p>
+</section>
+
+<section class="samples" aria-labelledby="samples-h">
+  <div class="row">
+    <h2 id="samples-h">Try a sample meeting</h2>
+    @if (settings.isDemo()) { <span class="chip plain">Demo mode: no key needed</span> }
+  </div>
+  <div class="sample-grid">
+    @for (s of samples; track s.id) {
+      <button type="button" class="sample card" (click)="openSample(s)">
+        <strong>{{ s.title }}</strong>
+        <span class="muted small">{{ s.blurb }}</span>
+        <span class="go">Open notes →</span>
+      </button>
+    }
+  </div>
+</section>
+
+<section class="card stack" aria-labelledby="new-h">
+  <h2 id="new-h">New meeting</h2>
+  <div class="meta">
+    <label><span>Title <span class="muted small">(optional, the AI suggests one)</span></span>
+      <input type="text" [value]="title()" (input)="title.set($any($event.target).value)" placeholder="e.g. Weekly product sync" />
+    </label>
+    <label>Meeting date
+      <input type="date" [value]="date()" (change)="date.set($any($event.target).value)" />
+    </label>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="How to capture the meeting" (keydown)="onTabKey($event)">
+    @for (t of tabs; track t.id) {
+      <button type="button" role="tab" [id]="'tab-' + t.id" [attr.aria-selected]="tab() === t.id"
+              [attr.aria-controls]="'panel-' + t.id" [attr.tabindex]="tab() === t.id ? 0 : -1" (click)="select(t.id)">
+        {{ t.label }}
+      </button>
+    }
+  </div>
+
+  <div class="panel" role="tabpanel" [id]="'panel-' + tab()" [attr.aria-labelledby]="'tab-' + tab()">
+    @switch (tab()) {
+      @case ('live') {
+        @if (!live.supported) {
+          <p class="alert info">Live captions need the Web Speech API (Chrome, Edge or Safari). You can still record, upload or paste.</p>
+        } @else {
+          <p class="muted small">Captions run in your browser as people talk. Tap the speaker who is talking so each line is labelled.</p>
+          <div class="speakers" role="radiogroup" aria-label="Who is speaking">
+            @for (s of speakers(); track s) {
+              <button type="button" role="radio" class="btn sm" [class.primary]="activeSpeaker() === s"
+                      [attr.aria-checked]="activeSpeaker() === s" (click)="activeSpeaker.set(s)">{{ s }}</button>
+            }
+            <form class="add" (submit)="$event.preventDefault(); addSpeaker(newName)">
+              <label class="sr-only" for="new-speaker">Add a speaker</label>
+              <input #newName id="new-speaker" type="text" placeholder="Add speaker" />
+              <button class="btn sm" type="submit">Add</button>
+            </form>
+          </div>
+
+          <div class="controls row">
+            @switch (live.state()) {
+              @case ('idle') { <button class="btn primary" type="button" (click)="startLive()">● {{ liveSegments().length ? 'Continue' : 'Start' }} captions</button> }
+              @case ('listening') { <button class="btn" type="button" (click)="live.pause()">❚❚ Pause</button> }
+              @case ('paused') { <button class="btn" type="button" (click)="live.resume(settings.settings().language)">▶ Resume</button> }
+            }
+            <span class="clock" [class.on]="live.state() === 'listening'" aria-live="off">{{ clock(live.elapsed()) }}</span>
+            <span class="spacer"></span>
+            @if (liveSegments().length) {
+              <button class="btn ghost" type="button" (click)="discardLive()">Discard</button>
+              <button class="btn primary" type="button" (click)="finishLive()">Finish and write notes</button>
+            }
+          </div>
+          @if (live.error()) { <p class="alert" role="alert">{{ live.error() }}</p> }
+
+          <ol class="live-lines" aria-live="polite" aria-label="Live transcript">
+            @for (s of liveSegments(); track s.id) {
+              <li><span class="t">{{ clock(s.start) }}</span><strong>{{ s.speaker }}</strong> {{ s.text }}</li>
+            }
+            @if (live.interim()) { <li class="interim"><span class="t">…</span><strong>{{ activeSpeaker() }}</strong> {{ live.interim() }}</li> }
+            @if (!liveSegments().length && !live.interim()) { <li class="muted hint">Lines appear here as they are recognised.</li> }
+          </ol>
+        }
+      }
+
+      @case ('record') {
+        @if (!recorder.supported) {
+          <p class="alert info">This browser cannot record audio. Upload a file or paste a transcript instead.</p>
+        } @else {
+          <p class="muted small">Records your microphone in the browser, then transcribes it with Groq Whisper
+            (<code>whisper-large-v3-turbo</code>) with timestamps.</p>
+          @if (!settings.groqKey()) {
+            <p class="alert info">Recording works now; transcription needs a free Groq key. <a routerLink="/settings">Add it in Settings</a>.</p>
+          }
+          <div class="controls row">
+            @switch (recorder.state()) {
+              @case ('idle') { <button class="btn primary" type="button" (click)="startRecording()">● Record</button> }
+              @case ('recording') { <button class="btn" type="button" (click)="recorder.pause()">❚❚ Pause</button> }
+              @case ('paused') { <button class="btn" type="button" (click)="recorder.resume()">▶ Resume</button> }
+            }
+            @if (recorder.state() !== 'idle') { <button class="btn" type="button" (click)="stopRecording()">■ Stop</button> }
+            <span class="clock" [class.on]="recorder.state() === 'recording'">{{ clock(recorder.elapsed()) }}</span>
+            <span class="meter" aria-hidden="true"><span [style.width.%]="recorder.level() * 100"></span></span>
+          </div>
+          @if (recorder.error()) { <p class="alert" role="alert">{{ recorder.error() }}</p> }
+          @if (recording(); as rec) {
+            <div class="stack">
+              <audio controls [src]="rec.url" aria-label="Recorded audio"></audio>
+              <div class="row">
+                <button class="btn primary" type="button" (click)="transcribeRecording()" [disabled]="!!busy() || !settings.groqKey()">Transcribe and write notes</button>
+                <a class="btn" [href]="rec.url" [attr.download]="rec.filename">Download audio</a>
+                <button class="btn ghost" type="button" (click)="clearRecording()">Discard</button>
+              </div>
+            </div>
+          }
+        }
+      }
+
+      @case ('upload') {
+        <label class="drop" (dragover)="$event.preventDefault()" (drop)="onDrop($event)">
+          <input #file type="file" class="sr-only" accept="audio/*,video/mp4,video/webm,.mp3,.m4a,.wav,.webm,.ogg,.flac,.txt,.vtt,.srt,.md"
+                 (change)="onPick(file)" [disabled]="!!busy()" />
+          <strong>Drop a file here or click to choose</strong>
+          <span class="muted small">Audio (up to {{ maxMb }} MB) is transcribed with Groq Whisper.
+            Transcripts (.txt, .vtt, .srt from Zoom, Teams or Meet) are read locally.</span>
+        </label>
+        @if (!settings.groqKey()) {
+          <p class="muted small">Audio needs a Groq key: <a routerLink="/settings">add one in Settings</a>. Transcript files work in Demo mode.</p>
+        }
+      }
+
+      @case ('paste') {
+        <label>Transcript
+          <textarea rows="10" [value]="pasted()" (input)="pasted.set($any($event.target).value)" [placeholder]="example"></textarea>
+        </label>
+        <p class="muted small">Understands <code>Name: text</code> lines, optional <code>[00:12]</code> timestamps,
+          Zoom/Teams exports and WebVTT. Without timestamps, times are estimated from word count.</p>
+        <div class="row">
+          <button class="btn primary" type="button" (click)="createFromPaste()" [disabled]="!preview()?.segments">Write notes</button>
+          <button class="btn ghost" type="button" (click)="pasted.set(example)">Use example</button>
+          @if (preview(); as p) {
+            <span class="muted small" aria-live="polite">{{ p.segments }} segments · {{ p.speakers.length }} speaker{{ p.speakers.length === 1 ? '' : 's' }}{{ p.timed ? ' · timestamps found' : '' }}</span>
+          }
+        </div>
+      }
+    }
+
+    @if (busy()) { <p class="row" role="status"><span class="spinner" aria-hidden="true"></span> {{ busy() }}</p> }
+    @if (error()) { <p class="alert" role="alert">{{ error() }}</p> }
+  </div>
+</section>
